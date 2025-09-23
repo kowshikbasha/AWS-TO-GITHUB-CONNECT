@@ -1,0 +1,29 @@
+name: CI-CD (Terraform with - OIDC)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write       # needed for OIDC federation
+      contents: read
+
+    steps:
+      # === Checkout code ===
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # === Configure AWS credentials via OIDC ===
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::707479681391:role/aws-secerts-githhubs111
+          role-session-name: GitHubActionsSession
+          aws-region: us-east-1
