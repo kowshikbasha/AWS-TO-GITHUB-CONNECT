@@ -1,4 +1,4 @@
-name: CI-CD (Terraform with - OIDC)
+name: CI-CD ( Databricks with - OIDC)
 
 on:
   push:
