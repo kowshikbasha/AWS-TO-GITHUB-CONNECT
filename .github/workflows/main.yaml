@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 name: CI-CD ( Databricks with - OIDC)
+=======
+name: CI-CD (Databricks with OIDC) - Print plaintext (UNMASKED) for testing
+>>>>>>> e9dbc0ce3313d7a4a82c39a6c1f880a85454ec95
 
 on:
   push:
@@ -6,11 +10,19 @@ on:
   pull_request:
 
 jobs:
+<<<<<<< HEAD
   terraform:
     runs-on: ubuntu-latest
 
     permissions:
       id-token: write       # needed for OIDC federation
+=======
+  databricks:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write       # Needed for OIDC federation
+>>>>>>> e9dbc0ce3313d7a4a82c39a6c1f880a85454ec95
       contents: read
 
     steps:
@@ -24,6 +36,75 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
+<<<<<<< HEAD
           role-to-assume: arn:aws:iam::707479681391:role/aws-secerts-githhubs111
           role-session-name: GitHubActionsSession
           aws-region: us-east-1
+=======
+          role-to-assume: arn:aws:iam::707479681391:role/Connection_between_aws_githubaction
+          role-session-name: GitHubActionsSession
+          aws-region: us-east-1
+
+      # === Install jq and AWS CLI v2 ===
+      - name: Install dependencies (jq + AWS CLI v2)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq unzip curl
+
+          # Install AWS CLI v2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          aws --version
+
+      # === Fetch secrets from AWS Secrets Manager ===
+      - name: Retrieve secrets from AWS Secrets Manager (UNMASKED)
+        id: secrets
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id arn:aws:secretsmanager:us-east-1:707479681391:secret:secert/kowshik/values-nw0rWe \
+            --query SecretString --output text)
+
+          # parse expected JSON fields
+          USERNAME=$(echo "$SECRET" | jq -r .username)
+          PASSWORD=$(echo "$SECRET" | jq -r .password)
+
+          # Export to GitHub environment for next steps (plaintext)
+          echo "USERNAME=$USERNAME" >> $GITHUB_ENV
+          echo "PASSWORD=$PASSWORD" >> $GITHUB_ENV
+
+      # === Print plaintext (UNMASKED) - DANGEROUS ===
+      - name: Print credentials (UNMASKED - for testing only)
+        run: |
+          echo "=== BEGIN PLAINTEXT CREDENTIALS (DANGEROUS) ==="
+          echo "USERNAME: $USERNAME"
+          echo "PASSWORD: $PASSWORD"
+          echo "=== END PLAINTEXT CREDENTIALS ==="
+
+      # === (Optional) Install Databricks CLI and configure if you want to use the creds ===
+      - name: Install Databricks CLI (optional)
+        if: always()
+        run: |
+          python -m pip install --upgrade pip
+          pip install databricks-cli
+
+      # === CLEANUP: Overwrite environment variables so they don't persist to later steps ===
+      - name: Cleanup plaintext variables (overwrite)
+        if: always()
+        run: |
+          # Overwrite the values in $GITHUB_ENV so subsequent steps see empty values
+          echo "USERNAME=" >> $GITHUB_ENV
+          echo "PASSWORD=" >> $GITHUB_ENV
+
+          # Also unset in this shell (only affects this step)
+          unset USERNAME || true
+          unset PASSWORD || true
+
+      # === Example safe step after cleanup (verifies variables are cleared) ===
+      - name: Verify cleanup (should be empty)
+        if: always()
+        run: |
+          echo "After cleanup: USERNAME='$USERNAME'"
+          echo "After cleanup: PASSWORD='$PASSWORD'"
+
+>>>>>>> e9dbc0ce3313d7a4a82c39a6c1f880a85454ec95
