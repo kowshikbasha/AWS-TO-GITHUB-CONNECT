@@ -1,47 +1,57 @@
 name: Sync AWS Lambda code to GitHub
 
 on:
-  workflow_dispatch:   # lets you run manually from GitHub UI
+  workflow_dispatch:    # allows manual trigger
   schedule:
-    - cron: "0 0 * * *"   # optional: run daily at midnight UTC
+    - cron: "0 0 * * *" # optional: run daily at midnight UTC
 
 jobs:
   sync:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
-      contents: write   # needed to push code back into repo
+      id-token: write      # needed for OIDC
+      contents: write      # needed to push code to repo
 
     steps:
-      - name: Checkout repo
+      # Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Configure AWS credentials via OIDC
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::<YOUR_AWS_ACCOUNT>:role/Connection_between_aws_githubaction
+          role-to-assume: arn:aws:iam::707479681391:role/Connection_between_aws_githubaction
           role-session-name: GitHubActionsSession
           aws-region: us-east-1
 
+      # Download Lambda code
       - name: Download Lambda code
         run: |
-          FUNC_NAME=my-lambda-func
+          FUNC_NAME=test
           URL=$(aws lambda get-function \
             --function-name $FUNC_NAME \
             --query 'Code.Location' \
             --output text)
 
+          echo "Downloading Lambda package..."
           curl -L -o lambda.zip "$URL"
+
           rm -rf lambda_code
           unzip -o lambda.zip -d lambda_code
 
-      - name: Commit to repo
+      # Commit & push back to GitHub
+      - name: Commit Lambda code
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
+
           git add lambda_code
-          git commit -m "Sync Lambda code from AWS Lambda"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes in Lambda code. Skipping commit."
+          else
+            git commit -m "Sync Lambda code from AWS Lambda"
+            git push
